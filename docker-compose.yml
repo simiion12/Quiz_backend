@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: Quiz-Frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    # For development, you can uncomment these lines:
+    # volumes:
+    #  - ./frontend:/app
+    #  - /app/node_modules
+    # command: npm run dev
+
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: Quiz-FastAPI
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8005 --reload
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "8005:8005"
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_ACCESS_SECRET_KEY=${AWS_ACCESS_SECRET_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - BUCKET_NAME=${BUCKET_NAME}
+    depends_on:
+      - db
+
+  # Database service
+  db:
+    image: postgres:latest
+    container_name: Quiz-Postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
